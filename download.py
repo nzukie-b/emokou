@@ -33,8 +33,7 @@ async def dl(aapi, username, password):
             if (illust.user.id != 4325914):
                 continue
             count += 1
-            image_url = illust.meta_single_page.get(
-                'original_image_url', illust.image_urls.square_medium)
+            image_url = illust.meta_single_page.get('original_image_url', illust.image_urls.large)
             logging.info("%s: %s" % (illust.title, image_url))
             try:
                 url_basename = os.path.basename(image_url)
@@ -44,7 +43,7 @@ async def dl(aapi, username, password):
                 logging.info(directory + '\\' + name)
                 await aapi.download(image_url, path=directory, name=name)
             except TimeoutError as e:
-                logging.warning(e)
+                logging.exception(e)
                 continue
             try:
                 if ImageData.objects(url=image_url):
@@ -57,7 +56,7 @@ async def dl(aapi, username, password):
                         directory + '\\' + name), lang='chi_sim+eng').replace('|', 'I').replace('&#39;', '\''))
                     logging.info("PARSED TEXT: %s", parsedText)
                 except TypeError as te:
-                    logging.WARNING("ERROR PARSING IMAGE: %s", te)
+                    logging.warn("CAN'T PARSE IMAGE WITH URL: %s  %s",image_url, te)
                     nonParsedCount += 1
                     parsedText = None
                     image.chi_cap = None
@@ -70,7 +69,7 @@ async def dl(aapi, username, password):
                 image.save()
             except Exception as e:
                 logging.warning('Failed on image with url: %s', image_url)
-                logging.error(e)
+                logging.exception(e)
                 continue
         json_result = await aapi.search_illust('mokou', search_target='exact_match_for_tags', offset=next_offset, req_auth=False, filter=None)
         next_offset = get_next_offset(json_result)

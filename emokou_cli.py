@@ -29,7 +29,7 @@ parser.add_argument('-d', '--debug', action='store_true',
 
 async def _main(*args, aapi):
     handler = [logging.FileHandler(filename="./emokou_cli.log", encoding='utf-8')]
-    logging.basicConfig(handlers=handler, format='%(levelname)s:%(message)s', level=logging.INFO)
+    logging.basicConfig(handlers=handler, format='%(levelname)s:%(message)s', level=logging.DEBUG)
     logging.info('STARTING')
     args = parser.parse_args()
     if (args.dl == 'y' and args.username and args.password):
@@ -38,7 +38,7 @@ async def _main(*args, aapi):
             await dl(aapi=aapi, username=args.username, password=args.password)
         except Exception as e:
             logging.exception(e)
-        logging.info('SEARCHING IMAGES FOR ENTERED TEXT')
+    logging.info('SEARCHING IMAGES FOR ENTERED TEXT')
     found_images = list(srch(html.unescape(args.text)))
     limit = min(args.number, len(found_images))
     top_n_images(found_images, limit)
