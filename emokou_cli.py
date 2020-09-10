@@ -6,14 +6,16 @@ import random
 import argparse
 import logging
 import html
+import db
 from pixivpy_async import AppPixivAPI
 from PIL import Image
 from download import dl
 from search import srch, top_n_images
 from models import ImageData
-from mongoengine import connect
 
-connect('emokou')
+
+# db.remote_connect()
+db.local_connect()
 parser = argparse.ArgumentParser()
 parser.add_argument("-dl", "--download", dest='dl', action="store", choices=['y', 'n'], default='n',
                     help="Whether to try downloading images from pixiv into the db.")
@@ -28,7 +30,7 @@ parser.add_argument('-d', '--debug', action='store_true',
                     default=False, help='To log debug info into a file.')
 
 async def _main(*args, aapi):
-    handler = [logging.FileHandler(filename="./emokou_cli.log", encoding='utf-8')]
+    handler = [logging.FileHandler(filename="./emoakou_cli.log", encoding='utf-8')]
     logging.basicConfig(handlers=handler, format='%(levelname)s:%(message)s', level=logging.DEBUG)
     logging.info('STARTING')
     args = parser.parse_args()
@@ -52,6 +54,5 @@ def main(*args):
         return False
     loop = asyncio.get_event_loop()
     loop.run_until_complete(_main(args, aapi=AppPixivAPI()))
-
 
 main()

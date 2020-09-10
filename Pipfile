@@ -8,11 +8,13 @@ autopep8 = "*"
 
 [packages]
 pixivpy-async = "*"
-pytesseract = "*"
 pillow = "*"
 mongoengine = "*"
-tesseract-ocr = "*"
 translate = "*"
+django = "*"
+pymongo = {extras = ["srv"],version = "*"}
+pytesseract = "*"
+discord-py = "*"
 
 [requires]
 python_version = "3.8"

@@ -6,16 +6,16 @@ import asyncio
 import os
 import html
 import logging
+import db
 
 from pixivpy_async import AppPixivAPI
-from mongoengine import connect
 from models import ImageData
 from translate import Translator
 from PIL import Image
 
 tl = Translator(to_lang='en', from_lang='zh', email='nzukie.b@husky.neu.edu')
-connect('emokou')
-
+# db.remote_connect()
+db.local_connect()
 async def dl(aapi, username, password):
     """Download Emoting Mokou memes to the db"""
     await aapi.login(username, password)
@@ -37,9 +37,12 @@ async def dl(aapi, username, password):
             logging.info("%s: %s" % (illust.title, image_url))
             try:
                 url_basename = os.path.basename(image_url)
+                #NOTE: Some pixiv images are saved as .webp foramat.
+                #TODO: Change the way that pictures are accessed after saving. Look into os.walk()
+                #       Likely want to get the name of the downloaded file from traversing the dir 
+                #       and then put it into the database. Delete downloaded file afterwards? || Delete all files at the end?
                 extension = os.path.splitext(url_basename)[1]
-                name = "illust_id_%d_%s%s" % (
-                    illust.id, illust.title, extension)
+                name = "illust_id_%d_%s%s" % (illust.id, illust.title, extension)
                 logging.info(directory + '\\' + name)
                 await aapi.download(image_url, path=directory, name=name)
             except TimeoutError as e:
@@ -51,7 +54,8 @@ async def dl(aapi, username, password):
                     continue
                 image = ImageData(url=image_url)
                 try:
-                    # The OCR library occasionally misenterprets I as |  ’ != '
+                    #TODO:  Look into why some images are failing here
+                    # The OCR library usually misenterprets I as | and  ’ as '
                     parsedText = html.unescape(pytesseract.image_to_string(Image.open(
                         directory + '\\' + name), lang='chi_sim+eng').replace('|', 'I').replace('&#39;', '\''))
                     logging.info("PARSED TEXT: %s", parsedText)
@@ -59,13 +63,9 @@ async def dl(aapi, username, password):
                     logging.warn("CAN'T PARSE IMAGE WITH URL: %s  %s",image_url, te)
                     nonParsedCount += 1
                     parsedText = None
-                    image.chi_cap = None
-                    image.eng_cap = None
-                    image.eng_tr = None
                     logging.info('NonParsed count = %d total count = %d', nonParsedCount, count)
-                if parsedText:
-                    parse_Image(parsedText, image)
-                    image.img.put(open(directory + '\\' + name, 'rb'))
+                parse_Image(parsedText, image)
+                image.img.put(open(directory + '\\' + name, 'rb'))
                 image.save()
             except Exception as e:
                 logging.warning('Failed on image with url: %s', image_url)
@@ -80,20 +80,21 @@ async def dl(aapi, username, password):
 
 def parse_Image(parsedText, image):
     """Separates text into various images."""
-    # Extract parsed 中文字
-    image.chi_cap = re.findall(r'[\u4e00-\u9fff]', parsedText)
-    # Add the rest of the parsed text to the caption
-    image.eng_cap = re.findall(r"\w*[a-zA-Z]?\'?[a-zA-Z]", parsedText.upper())
-    if (image.eng_cap):
-        logging.info("ENG CHARS: %s", image.eng_cap)
-    if (image.chi_cap):
-        # Translate 中文 to english
-        text = tl.translate(''.join(image.chi_cap)).upper()
-        print('TRANSLATED TEXT: ',  text)
-        # text = text.encode().decode('unicode-escape')
-        image.eng_tr = text.split()
-        logging.info('中文字：%s', image.chi_cap)
-        logging.info('TRANSLATION: %s', image.eng_tr)
+    if (parsedText):
+        # Extract parsed 中文字
+        image.chi_cap = re.findall(r'[\u4e00-\u9fff]', parsedText)
+        # Add the rest of the parsed text to the caption
+        image.eng_cap = re.findall(r"\w*[a-zA-Z]?\'?[a-zA-Z]", parsedText.upper())
+        if (image.eng_cap):
+            logging.info("ENG CHARS: %s", image.eng_cap)
+        if (image.chi_cap):
+            # Translate 中文 to english
+            text = tl.translate(''.join(image.chi_cap)).upper()
+            print('TRANSLATED TEXT: ',  text)
+            # text = text.encode().decode('unicode-escape')
+            image.eng_tr = text.split()
+            logging.info('中文字：%s', image.chi_cap)
+            logging.info('TRANSLATION: %s', image.eng_tr)
     return image
 
 

@@ -8,9 +8,9 @@ from PIL import Image
 from download import dl
 from search import srch
 from models import ImageData
-from mongoengine import connect
-connect('emokou')
+from db import local_connect
 
+local_connect()
 
 async def _main(aapi):
     redownload = input("Do you want to redownload the MEMES? (y/n) \n")
